@@ -9,6 +9,7 @@ export default class App extends React.Component {
     return (
       // React-native-elements docs:
       //    https://react-native-training.github.io/react-native-elements/docs/0.19.0/card.html
+	// key required
       <Card key={item.id} title={item.text} image={{ uri: item.uri }}>
         <Text style={{ marginBottom: 10 }}>I can customize more</Text>
         <Button
