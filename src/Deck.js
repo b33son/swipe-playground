@@ -9,7 +9,9 @@ import {
   Animated,
   StyleSheet,
   PanResponder,
-  Dimensions
+  Dimensions,
+  LayoutAnimation,
+  UIManager
 } from "react-native";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -78,6 +80,24 @@ export default class Deck extends Component {
     // this.state.position = { panResponder, position };
   }
 
+  componentWillReceiveProps(nextProps) {
+    // if not exact set of data, we reset
+    if (nextProps.data !== this.props.data) {
+      this.setState({ index: 0 });
+    }
+  }
+
+  componentWillUpdate() {
+    // Following is needed for Android devices, if android (setLayoutAnimationEnabledExperimental), then call
+    // setLayoutAnimationEnabledExperimental(true)
+    UIManager.setLayoutAnimationEnabledExperimental &&
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+
+    // Animate any changes to layout.
+    //  Used for animating as cards moving up after swipe
+    LayoutAnimation.spring();
+  }
+
   forceSwipe(direction) {
     const x = direction === "right" ? SCREEN_WIDTH : -SCREEN_WIDTH;
     Animated.timing(this.state.position, {
@@ -122,25 +142,40 @@ export default class Deck extends Component {
       return this.props.renderNoMoreCards();
     }
 
-    return this.props.data.map((item, cardIndex) => {
-      if (cardIndex < this.state.index) {
-        return null;
-      }
+    return this.props.data
+      .map((item, cardIndex) => {
+        //  if we already passed this card and swiped left or right
+        if (cardIndex < this.state.index) {
+          return null;
+        }
 
-      if (cardIndex === this.state.index) {
-        return (
-          <Animated.View
-            key={item.id}
-            style={this.getCardStyle()}
-            {...this.state.panResponder.panHandlers}
-          >
-            {this.props.renderCard(item)}
-          </Animated.View>
-        );
-      } else {
-        return this.props.renderCard(item);
-      }
-    });
+        // if current card
+        if (cardIndex === this.state.index) {
+          return (
+            <Animated.View
+              key={item.id}
+              style={[this.getCardStyle(), styles.cardStyle]}
+              {...this.state.panResponder.panHandlers}
+            >
+              {this.props.renderCard(item)}
+            </Animated.View>
+          );
+        } else {
+          // else if this card is still coming up / not yet viewed
+          return (
+            <Animated.View
+              key={item.id}
+              style={[
+                styles.cardStyle,
+                { top: 10 * (cardIndex - this.state.index) }
+              ]}
+            >
+              {this.props.renderCard(item)}
+            </Animated.View>
+          );
+        }
+      }) // Need last card to render first (on the bottom of the deck), so reverse
+      .reverse();
   }
 
   render() {
@@ -149,11 +184,10 @@ export default class Deck extends Component {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-
-    alignItems: "center"
+  cardStyle: {
+    position: "absolute",
+    //left: 0,
+    //right: 0,
+    width: SCREEN_WIDTH
   }
 });
